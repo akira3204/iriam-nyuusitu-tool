@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>入室耐久 計算ツール</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #f5f6f8;
+    color: #222;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px 50px;
+  }
+  h1 { margin: 0 0 8px; font-size: 28px; }
+  .desc { color: #666; margin-bottom: 22px; }
+  .card {
+    background: white;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 3px 14px rgba(0,0,0,.06);
+  }
+  .result {
+    position: sticky;
+    top: 10px;
+    z-index: 5;
+    text-align: center;
+    border: 2px solid #333;
+  }
+  .result .label { color:#666; font-size:14px; }
+  .result .number { font-size: 48px; font-weight: 800; line-height: 1.15; }
+  .section-title {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .section-title h2 { margin:0; font-size:21px; }
+  .start-row {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  input[type="number"], input[type="text"] {
+    border:1px solid #ccc;
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:16px;
+    background:#fff;
+  }
+  .start-row input { width:150px; }
+  .item {
+    display:grid;
+    grid-template-columns: minmax(130px, 1fr) 120px auto 80px 42px;
+    gap:8px;
+    align-items:center;
+    padding:10px 0;
+    border-top:1px solid #eee;
+  }
+  .item:first-child { border-top:0; }
+  .unit { color:#777; font-size:14px; }
+  .count {
+    text-align:center;
+    font-weight:700;
+    min-width:45px;
+  }
+  button {
+    border:0;
+    border-radius:10px;
+    padding:9px 13px;
+    font-size:15px;
+    cursor:pointer;
+    background:#333;
+    color:white;
+  }
+  button:hover { opacity:.85; }
+  .plus { background:#2d8a52; font-size:20px; padding:7px 14px; }
+  .minus { background:#777; }
+  .remove { background:#ddd; color:#555; font-size:18px; padding:6px 10px; }
+  .add { background:#555; }
+  .reset { background:#b33; }
+  .gift-result { color:#2d8a52; font-weight:700; text-align:right; }
+  .gift-input-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:6px 0 14px; }
+  .gift-input-row input { width:180px; }
+  .gift-total-box { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 16px; border-radius:12px; background:#f1f7f3; }
+  .gift-total-box strong { font-size:22px; }
+  .summary {
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:14px;
+    padding-top:12px;
+    border-top:1px solid #eee;
+    font-weight:700;
+  }
+  .hint {
+    font-size:13px;
+    color:#777;
+    margin-top:10px;
+  }
+  @media(max-width:650px){
+    .item {
+      grid-template-columns: 1fr 95px 28px 70px 38px;
+    }
+    .item .plus { padding:7px 10px; }
+    .result .number { font-size:40px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>入室耐久 計算ツール</h1>
+  <div class="desc">救済・妨害が発生した回数を「＋」でカウントして、現在人数を自動計算します。</div>
+
+  <div class="card result">
+    <div class="label">現在の人数</div>
+    <div class="number" id="current">0人</div>
+  </div>
+
+  <div class="card">
+    <div class="start-row">
+      <strong>開始人数</strong>
+      <input id="start" type="number" min="0" value="0">
+      <span>人</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      <h2>🟢 救済</h2>
+      <button class="add" onclick="addItem('rescue')">＋ 救済を追加</button>
+    </div>
+    <div id="rescue"></div>
+    <div class="summary"><span>救済合計</span><span id="rescueTotal">+0人</span></div>
+    <div class="hint">例：内容「入室」・人数「10人」→ ＋を1回押すと10人分加算。</div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      <h2>🔴 妨害</h2>
+      <button class="add" onclick="addItem('block')">＋ 妨害を追加</button>
+    </div>
+    <div id="block"></div>
+    <div class="summary"><span>妨害合計</span><span id="blockTotal">-0人</span></div>
+    <div class="hint">例：内容「退出」・人数「5人」→ ＋を1回押すと5人分減算。</div>
+  </div>
+
+  <div class="card">
+    <div class="section-title"><h2>🎁 ギフト</h2></div>
+    <div class="gift-input-row">
+      <input id="giftPointsInput" type="number" min="0" placeholder="もらったポイント">
+      <span>ポイント</span>
+      <button class="add" onclick="addGiftPoints()">＋追加</button>
+    </div>
+    <div class="gift-total-box">
+      <span>ギフト合計</span>
+      <strong id="giftTotal">0ポイント → 0人</strong>
+    </div>
+    <div class="hint">ポイントを入力して「＋追加」を押すと合計に加算され、入力欄は自動で空になります。1ポイント＝1人です。</div>
+  </div>
+
+  <div style="text-align:center">
+    <button class="reset" onclick="resetAll()">すべてリセット</button>
+  </div>
+</div>
+
+<script>
+let nextId = 1;
+let giftPointsTotal = 0;
+
+function addItem(type, label='', value=0) {
+  const container = document.getElementById(type);
+  const id = nextId++;
+  const row = document.createElement('div');
+  row.className = 'item';
+  row.dataset.id = id;
+  row.dataset.type = type;
+  row.innerHTML = `
+    <input class="label" type="text" placeholder="内容（例：入室）" value="${escapeHtml(label)}" oninput="calculate()">
+    <input class="value" type="number" min="0" value="${value}" oninput="calculate()">
+    <span class="unit">人</span>
+    <span class="count">0回</span>
+    <button class="plus" onclick="changeCount(this, 1)">＋</button>
+    <button class="minus" onclick="changeCount(this, -1)">−</button>
+    <button class="remove" onclick="this.parentElement.remove(); calculate()">×</button>
+  `;
+  container.appendChild(row);
+  calculate();
+}
+
+function changeCount(button, amount) {
+  const row = button.parentElement;
+  const countEl = row.querySelector('.count');
+  let count = Number(row.dataset.count || 0);
+  count = Math.max(0, count + amount);
+  row.dataset.count = count;
+  countEl.textContent = count + '回';
+  calculate();
+}
+
+function addGiftPoints() {
+  const input = document.getElementById('giftPointsInput');
+  const points = Number(input.value) || 0;
+  if (points <= 0) return;
+  giftPointsTotal += points;
+  input.value = '';
+  calculate();
+}
+
+
+function calculate() {
+  let rescueTotal = 0;
+  let blockTotal = 0;
+
+  document.querySelectorAll('.item').forEach(row => {
+    const value = Number(row.querySelector('.value').value) || 0;
+    const count = Number(row.dataset.count || 0);
+    const total = value * count;
+    if (row.dataset.type === 'rescue') rescueTotal += total;
+    if (row.dataset.type === 'block') blockTotal += total;
+  });
+
+  const start = Number(document.getElementById('start').value) || 0;
+  const current = start + rescueTotal + giftPointsTotal - blockTotal;
+
+  document.getElementById('rescueTotal').textContent = '+' + rescueTotal.toLocaleString() + '人';
+  document.getElementById('blockTotal').textContent = '-' + blockTotal.toLocaleString() + '人';
+  document.getElementById('giftTotal').textContent = giftPointsTotal.toLocaleString() + 'ポイント → ' + giftPointsTotal.toLocaleString() + '人';
+  document.getElementById('current').textContent = current.toLocaleString() + '人';
+}
+
+function resetAll() {
+  if (!confirm('すべての入力とカウントをリセットしますか？')) return;
+  document.getElementById('start').value = 0;
+  document.getElementById('rescue').innerHTML = '';
+  document.getElementById('block').innerHTML = '';
+  giftPointsTotal = 0;
+  document.getElementById('giftPointsInput').value = '';
+  addItem('rescue');
+  addItem('block');
+  calculate();
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+  }[c]));
+}
+
+document.getElementById('start').addEventListener('input', calculate);
+addItem('rescue');
+addItem('block');
+addGift();
+</script>
+</body>
+</html>
